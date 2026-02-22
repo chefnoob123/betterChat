@@ -8,8 +8,10 @@ import (
 type messageType int
 
 const (
-	ClientConnected messageType = iota + 1 // iota basically makes the values int the enums numeric like 1, 2, 3 etc
-	ClientDisconnected
+	ClientConnectedtoMain messageType = iota + 1 // iota basically makes the values int the enums numeric like 1, 2, 3 etc
+	ClientDisconnectedfromMain
+	JoinRoom
+	LeaveRoom
 	NewMessage
 )
 
