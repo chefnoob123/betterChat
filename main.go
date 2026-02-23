@@ -6,6 +6,7 @@ import (
 	"log"
 	"navit/projects/betterChat/util"
 	"net"
+	"unicode/utf8"
 )
 
 const (
@@ -15,24 +16,34 @@ const (
 // MainServer listens to incoming requests and
 // places each request into the correct room
 func MainServer(message chan util.Message) {
+	clientsInMain := map[string]*util.Client{}
 	for {
 		mes := <-message
-
+		addr := mes.Conn.RemoteAddr().(*net.TCPAddr)
 		switch mes.Type {
 		case util.ClientConnectedtoMain:
 			log.Printf("Client %s connected to the main server!\n", mes.Conn.RemoteAddr())
-			log.Printf("Here is the list of Rooms you can join %s", mes.Conn.RemoteAddr())
-		case util.NewMessage:
-			_, err := mes.Conn.Write([]byte(mes.Text))
-			if err != nil {
-				// TODO: remove the connection from the list
-				fmt.Printf("Could not send data to %s because %s", mes.Conn.RemoteAddr(), err)
+			clientsInMain[addr.String()] = &util.Client{
+				Conn: mes.Conn,
 			}
-			log.Printf("Client %s sent message %s\n", mes.Conn.RemoteAddr(), mes.Text)
-		case util.ClientDisconnectedfromMain:
-			addr := mes.Conn.RemoteAddr().(*net.TCPAddr)
-			log.Printf("Client %s disconnected from the main server", addr)
+			log.Printf("Here is the list of Rooms you can join %s", mes.Conn.RemoteAddr())
 
+		case util.NewMessage:
+			authorAddr := mes.Conn.RemoteAddr()
+			// author := clientsInMain[author_addr.String()]
+			if utf8.Valid([]byte(mes.Text)) {
+				if addr.String() != authorAddr.String() {
+					_, err := mes.Conn.Write([]byte(mes.Text))
+					if err != nil {
+						// TODO: remove the connection from the list
+						fmt.Printf("Could not send data to %s because %s", mes.Conn.RemoteAddr(), err)
+					}
+					log.Printf("Client %s sent message %s\n", mes.Conn.RemoteAddr(), mes.Text)
+				}
+			}
+		case util.ClientDisconnectedfromMain:
+			log.Printf("Client %s disconnected from the main server", addr)
+			delete(clientsInMain, addr.String())
 		}
 	}
 }
